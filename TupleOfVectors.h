@@ -31,7 +31,6 @@ struct AllDifferentHelper<T> {};
 template<class... CLASSES>
 concept AllDifferentAndNotEmpty = requires() { AllDifferentHelper<CLASSES...>(); };
 
-
 struct ElementID {
     size_t partition;
     size_t index;
@@ -72,9 +71,9 @@ consteval T powi(T base, uint index) {
  * @tparam CONTAINEDTYPES
  */
 template<class...CONTAINEDTYPES> requires AllDifferentAndNotEmpty<CONTAINEDTYPES...>
-class PolymorphicCollection {
+class TupleOfVectors {
 public:
-    using self_type = PolymorphicCollection<CONTAINEDTYPES...>;
+    using self_type = TupleOfVectors<CONTAINEDTYPES...>;
     template<class T>  using partition_type = std::vector<T>;
     template<size_t N> using element_type   = std::tuple_element_t<N,std::tuple<CONTAINEDTYPES...>>;
     using partition_variant_type = std::variant<std::reference_wrapper<partition_type<CONTAINEDTYPES>>...>;
@@ -87,9 +86,9 @@ public:
 public:
 
     // ------ constructors -------------
-    PolymorphicCollection(std::tuple<partition_type<CONTAINEDTYPES>...> init):
+    TupleOfVectors(std::tuple<partition_type<CONTAINEDTYPES>...> init):
         dataTuple(std::move(init)) { };
-    PolymorphicCollection() : PolymorphicCollection(std::tuple<partition_type<CONTAINEDTYPES>...>{}) {};
+    TupleOfVectors() : TupleOfVectors(std::tuple<partition_type<CONTAINEDTYPES>...>{}) {};
 
     // ------ compile-time typing -------
     template<class T>
@@ -175,14 +174,15 @@ public:
         return (this->*constElementGetters[element.partition])(element.index);
     }
 
-//protected:
+protected:
+
     template<class FUNCTION, class T>
     void visitExecutor(FUNCTION &&func, size_t index) {
         func(get<T>(index));
     }
 
     template<class FUNCTION, size_t... partitionIDs, class...ELEMENTS>
-    inline void multiargVisitExecutorImpl(FUNCTION &&func, std::index_sequence<partitionIDs...> seq, const ELEMENTS &...elements) {
+    inline void multiargVisitExecutorImpl(FUNCTION &&func, std::index_sequence<partitionIDs...>, const ELEMENTS &...elements) {
         func(get<partitionIDs>(elements.index)...);
     }
 
@@ -221,24 +221,24 @@ public:
     }
 
     static constexpr std::array<
-            partition_variant_type(PolymorphicCollection<CONTAINEDTYPES...>::*)(),
+            partition_variant_type(TupleOfVectors<CONTAINEDTYPES...>::*)(),
             sizeof...(CONTAINEDTYPES)>
-            partitionGetters{&PolymorphicCollection<CONTAINEDTYPES...>::getPartitionVariant<CONTAINEDTYPES>...};
+            partitionGetters{&TupleOfVectors<CONTAINEDTYPES...>::getPartitionVariant<CONTAINEDTYPES>...};
 
     static constexpr std::array<
-        const_partition_variant_type(PolymorphicCollection<CONTAINEDTYPES...>::*)() const,
+        const_partition_variant_type(TupleOfVectors<CONTAINEDTYPES...>::*)() const,
         sizeof...(CONTAINEDTYPES)>
-            constPartitionGetters{&PolymorphicCollection<CONTAINEDTYPES...>::getConstPartitionVariant<CONTAINEDTYPES>...};
+            constPartitionGetters{&TupleOfVectors<CONTAINEDTYPES...>::getConstPartitionVariant<CONTAINEDTYPES>...};
 
     static constexpr std::array<
-            element_variant_type(PolymorphicCollection<CONTAINEDTYPES...>::*)(size_t),
+            element_variant_type(TupleOfVectors<CONTAINEDTYPES...>::*)(size_t),
             sizeof...(CONTAINEDTYPES)>
-            elementGetters{&PolymorphicCollection<CONTAINEDTYPES...>::getElementVariant<CONTAINEDTYPES>...};
+            elementGetters{&TupleOfVectors<CONTAINEDTYPES...>::getElementVariant<CONTAINEDTYPES>...};
 
     static constexpr std::array<
-            const_element_variant_type(PolymorphicCollection<CONTAINEDTYPES...>::*)(size_t) const,
+            const_element_variant_type(TupleOfVectors<CONTAINEDTYPES...>::*)(size_t) const,
             sizeof...(CONTAINEDTYPES)>
-            constElementGetters{&PolymorphicCollection<CONTAINEDTYPES...>::getConstElementVariant<CONTAINEDTYPES>...};
+            constElementGetters{&TupleOfVectors<CONTAINEDTYPES...>::getConstElementVariant<CONTAINEDTYPES>...};
 };
 
 #endif //UNTITLED_POLYMORPHICCOLLECTION_H
