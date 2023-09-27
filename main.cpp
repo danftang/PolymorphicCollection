@@ -1,9 +1,10 @@
 #include <iostream>
 #include <string>
 #include <random>
-#include "TupleOfVectors.h"
-#include "Partition.h"
+//#include "TupleOfVectors.h"
+#include "VectorVariant.h"
 #include "ArrayOfPartitions.h"
+#include "TupleHelpers.h"
 
 using namespace std::string_literals;
 
@@ -45,9 +46,34 @@ int main() {
         auto &partitionVariant = myCollection[randomPartition].asVariant();
         auto *maybeAStringVector = std::get_if<2>(&partitionVariant);
         if(maybeAStringVector != nullptr) {
-            std::cout << "Found string " << maybeAStringVector->get()[0] << std::endl;
+            std::cout << "Found string " << (*maybeAStringVector)[0] << std::endl;
         }
     }
+
+    // we can iterate over all partitions
+    myCollection.for_each_partition([]<class T>(std::vector<T> &vec) {
+        std::cout << "Partition of type " << typeid(T).name() << " has size " << vec.size() << std::endl;
+    });
+
+    // or we can iterate over all elements
+    myCollection.for_each_element([](auto &item) {
+        std::cout << "Element: " << item << std::endl;
+    });
+
+    myCollection.visit([](auto &item) { std::cout << "Single element access: " <<  item << std::endl; }, ElementIndex{0,0});
+
+
+    // =======================================================
+    // Runtime access to tuples
+    // =======================================================
+
+    std::tuple<int,double,char> myTuple(1234,5.678,'a');
+
+    int index  = randomGenerator(gen);
+    int index2 = randomGenerator(gen);
+
+    visit_tuple([](auto &item) { std::cout << item << std::endl; }, myTuple, index);
+    visit_tuple([](auto &item1, auto &item2) { std::cout << item1 << " " << item2 << std::endl; }, myTuple, index, index2);
 
     return 0;
 }

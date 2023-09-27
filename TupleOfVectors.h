@@ -9,27 +9,9 @@
 #include <vector>
 #include <variant>
 #include <functional>
+#include <concepts>
+#include "Concepts.h"
 
-template<size_t suffix, size_t...prefix>
-static std::index_sequence<prefix..., suffix> add_suffix(std::index_sequence<prefix...>) { return {}; }
-
-template<size_t N, size_t digits, size_t base>
-struct base_n_expansion : decltype(add_suffix<N%base>(base_n_expansion<N/base,digits-1,base>())) { };
-
-template<size_t N, size_t base>
-struct base_n_expansion<N,1,base> : std::index_sequence<N%base> { };
-
-template<class T, class... OTHERS>
-concept IsIn = (std::same_as<std::remove_cvref_t<T>,std::remove_cvref_t<OTHERS>> || ...);
-
-template<class T, class...OTHERS> requires(!IsIn<T,OTHERS...>)
-struct AllDifferentHelper: AllDifferentHelper<OTHERS...> {};
-
-template<class T>
-struct AllDifferentHelper<T> {};
-
-template<class... CLASSES>
-concept AllDifferentAndNotEmpty = requires() { AllDifferentHelper<CLASSES...>(); };
 
 struct ElementID {
     size_t partition;
@@ -44,7 +26,7 @@ struct ElementID {
  *   x^2 = x * x
  *   x^0 = 1
  */
-template<std::integral T>
+template<class T> requires std::is_integral_v<T>
 consteval T powi(T base, uint index) {
     if(index == 2) return base*base;
     if(index == 0) return 1;
@@ -133,14 +115,11 @@ public:
     }
 
 
-    template<class FUNCTION, std::convertible_to<ElementID>... ELEMENTS>
+    template<class FUNCTION, class... ELEMENTS> requires (std::is_convertible_v<ELEMENTS,ElementID> &&...)
     void visit(FUNCTION &&func, const ELEMENTS &... elementIDs) {
         static constexpr auto vtable = makeMultiargVTable<FUNCTION,ELEMENTS...>(std::make_index_sequence<powi(sizeof...(CONTAINEDTYPES),sizeof...(ELEMENTS))>());
         size_t vtableIndex = 0;
-        ([&vtableIndex](ElementID element) {
-            vtableIndex *= sizeof...(CONTAINEDTYPES);
-            vtableIndex += element.partition;
-        }(elementIDs),...);
+        ((vtableIndex = vtableIndex*sizeof...(CONTAINEDTYPES) + elementIDs.partition),...);
         (this->*vtable[vtableIndex])(std::forward<FUNCTION>(func), elementIDs...);
     }
 
@@ -193,11 +172,7 @@ protected:
 
     template<class FUNCTION, class...ELEMENTS, size_t... indices>
     static consteval auto makeMultiargVTable(std::index_sequence<indices...>) {
-        using vtable_entry = void(self_type::*)(FUNCTION &&, const ELEMENTS &...);
-        return std::array<vtable_entry, sizeof...(indices)>{
-                &self_type::multiargVisitExecutor<FUNCTION,indices,ELEMENTS...>...
-        };
-
+        return std::array{ &self_type::multiargVisitExecutor<FUNCTION,indices,ELEMENTS...>...};
     }
 
     template<class T>
