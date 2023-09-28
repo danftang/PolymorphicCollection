@@ -9,35 +9,45 @@
 #include <utility>
 
 template<class T, template<class...> class TEMPLATE>
-struct is_template_of {
+struct is_class_template_of {
     static constexpr bool value = false;
 };
 
 template<template<class...> class TEMPLATEDCLASS, class...TEMPLATES>
-struct is_template_of<TEMPLATEDCLASS<TEMPLATES...>,TEMPLATEDCLASS> {
+struct is_class_template_of<TEMPLATEDCLASS<TEMPLATES...>,TEMPLATEDCLASS> {
     static constexpr bool value = true;
 };
 
 template<template<class...> class TEMPLATEDCLASS, class...TEMPLATES>
-struct is_template_of<const TEMPLATEDCLASS<TEMPLATES...>,TEMPLATEDCLASS> {
+struct is_class_template_of<const TEMPLATEDCLASS<TEMPLATES...>,TEMPLATEDCLASS> {
     static constexpr bool value = true;
 };
 
 template<class T, template<class...> class TEMPLATE>
-static constexpr bool is_template_of_v = is_template_of<T,TEMPLATE>::value;
+static constexpr bool is_template_of_v = is_class_template_of<T,TEMPLATE>::value;
 
 template<class T, template<class...> class TEMPLATE>
-concept IsTemplateOf = is_template_of_v<T,TEMPLATE>;
+concept IsClassTemplateOf = is_template_of_v<T,TEMPLATE>;
 
 
-template<size_t suffix, size_t...prefix>
-static std::index_sequence<prefix..., suffix> add_suffix(std::index_sequence<prefix...>) { return {}; }
+/** Expresses a number as a sequence of digits in a given base
+ *
+ * @tparam N        the number to express
+ * @tparam digits   how many digits to expand
+ * @tparam base     the base to use in expansion
+ * @tparam suffix   an optional suffix which will be added to the end of the expansion
+ */
+template<size_t N, size_t digits, size_t base, size_t...suffix>
+struct base_n_expansion : base_n_expansion<N/base, digits - 1, base, N%base, suffix...> { };
+
+template<size_t N, size_t base, size_t... suffix>
+struct base_n_expansion<N, 1, base, suffix...> {
+    using type = typename std::index_sequence<N%base, suffix...>;
+};
 
 template<size_t N, size_t digits, size_t base>
-struct base_n_expansion : decltype(add_suffix<N%base>(base_n_expansion<N/base,digits-1,base>())) { };
+using base_n_expansion_t = typename base_n_expansion<N,digits,base>::type;
 
-template<size_t N, size_t base>
-struct base_n_expansion<N,1,base> : std::index_sequence<N%base> { };
 
 template<class T, class... OTHERS>
 concept IsIn = (std::same_as<std::remove_cvref_t<T>,std::remove_cvref_t<OTHERS>> || ...);
