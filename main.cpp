@@ -4,8 +4,7 @@
 #include "RuntimeTupleUtils.h"
 
 using namespace std::string_literals;
-
-void myFunc(int &) {}
+using namespace deselby;
 
 int main() {
     // =======================================================
@@ -65,6 +64,8 @@ int main() {
     push_back(myTupleOfVectors,1.234);  // inserts into std::vector<double>
 
     for_each_element(myTupleOfVectors, [](auto &element) { std::cout << element << std::endl; });
+
+    static_assert(std::ranges::range<std::vector<int>>);
 
     return 0;
 }
